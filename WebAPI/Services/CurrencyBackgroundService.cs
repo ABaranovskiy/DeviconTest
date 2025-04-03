@@ -14,7 +14,7 @@ public class CurrencyBackgroundService(IServiceProvider services) : BackgroundSe
             var dbContext = scope.ServiceProvider.GetRequiredService<ExchangeDbContext>();
 
             // Заполняем базу значениями курсов валют за последний месяц
-            var rates = await cbrService.GetRatesForThisMonthAsync();
+            var rates = await cbrService.GetRatesForLastMonthAsync();
             await CurrencyService.ReplaceRates(rates, dbContext, cancellationToken);
 
             await Task.Delay(TimeSpan.FromHours(24), cancellationToken);

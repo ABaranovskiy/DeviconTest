@@ -15,7 +15,7 @@
         <th>Дата</th>
         <th>EUR</th>
         <th>USD</th>
-        <th>BYN</th>
+        <th>{{ getBYRBYNLabel() }}</th>
         <th>KZT</th>
       </tr>
       </thead>
@@ -24,7 +24,7 @@
         <td>{{ formatDate(rate.date) }}</td>
         <td>{{ rate.EUR || '-' }}</td>
         <td>{{ rate.USD || '-' }}</td>
-        <td>{{ rate.BYN || '-' }}</td>
+        <td>{{ rate.BYN || rate.BYR || '-' }}</td>
         <td>{{ rate.KZT || '-' }}</td>
       </tr>
       </tbody>
@@ -80,13 +80,20 @@ export default {
             date: dateKey,
             EUR: null,
             USD: null,
-            BYN: null,
+            BYN: null, BYR: null,
             KZT: null
           };
         }
         acc[dateKey][item.currencyCode] = (item.value / item.nominal).toFixed(4);
         return acc;
       }, {});
+    },
+    
+    getBYRBYNLabel() {
+      if (Object.keys(this.rates).length === 0) return 'BYN';
+
+      const firstDateKey = Object.keys(this.rates)[0];
+      return this.rates[firstDateKey].BYN !== null ? 'BYN' : 'BYR';
     },
 
     async updateData() {

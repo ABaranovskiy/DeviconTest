@@ -42,7 +42,7 @@ public class CurrencyRatesController(ExchangeDbContext context, CbrCurrencyServi
 
         var orderedQuery = query
             .OrderByDescending(x => x.Rate.Date)
-            .Take(10 * CbrCurrencyService.AcceptableCodes.Count);
+            .Take(10 * CbrCurrencyService.AcceptableCurrenciesCount);
 
         var rates = await orderedQuery
             .Select(x => new CurrencyRateDto(
@@ -56,8 +56,17 @@ public class CurrencyRatesController(ExchangeDbContext context, CbrCurrencyServi
         // Изменение порядка для возврата от старых к новым
         rates.Reverse();
 
-        cache.Set(cacheKey, rates, TimeSpan.FromMinutes(10));
+        // Если в БД нет значений за указанный период
+        if (startDate.HasValue
+            && endDate.HasValue
+            && rates.Count / CbrCurrencyService.AcceptableCurrenciesCount < (endDate - startDate).Value.Days)
+        {
+            var uploadedRates = await cbrCurrencyService.GetRatesForDateRangeAsync(startDate.Value, endDate.Value);
 
+            return Ok(uploadedRates);
+        }
+        
+        cache.Set(cacheKey, rates, TimeSpan.FromMinutes(10));
         return Ok(rates);
     }
 
@@ -67,12 +76,12 @@ public class CurrencyRatesController(ExchangeDbContext context, CbrCurrencyServi
     public async Task<IActionResult> Update()
     {
         var cancellationTokenSource = new CancellationTokenSource();
-   
+
         try
         {
-            var rates = await cbrCurrencyService.GetRatesForThisMonthAsync();
+            var rates = await cbrCurrencyService.GetRatesForLastMonthAsync();
             await CurrencyService.ReplaceRates(rates, context, cancellationTokenSource.Token);
-            
+
             return Ok(new UpdateResponseDto(true, DateTime.UtcNow));
         }
         catch (Exception ex)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using WebAPI.Dto;
 
@@ -5,8 +6,9 @@ namespace WebAPI.Services;
 
 public class CbrCurrencyService(HttpClient httpClient, IConfiguration configuration)
 {
-    // Список обрабатываемых валют (EUR, USD, BYN, KZT)
-    public static readonly HashSet<string> AcceptableCodes = ["EUR", "USD", "BYN", "KZT"];
+    public static readonly int AcceptableCurrenciesCount = 4;
+    // Список обрабатываемых валют (EUR, USD, BYN/BYR, KZT)
+    public static readonly HashSet<string> AcceptableCodes = ["EUR", "USD", "BYR", "BYN", "KZT"];
 
     // Получение курсов из ЦБ РФ за конкретную дату
     public async Task<List<CurrencyRateDto>> GetRatesForDateAsync(DateTime date)
@@ -26,7 +28,10 @@ public class CbrCurrencyService(HttpClient httpClient, IConfiguration configurat
                 rates.Add(new CurrencyRateDto(
                     code,
                     date,
-                    decimal.Parse(element.Element("Value")?.Value ?? "0"),
+                    decimal.Parse(
+                        element.Element("Value")?.Value.Replace(",", ".") ?? "0", 
+                        CultureInfo.InvariantCulture
+                    ),
                     int.Parse(element.Element("Nominal")?.Value ?? "1")
                 ));
             }
@@ -46,11 +51,11 @@ public class CbrCurrencyService(HttpClient httpClient, IConfiguration configurat
         return result;
     }
     
-    public async Task<List<CurrencyRateDto>> GetRatesForThisMonthAsync()
+    public async Task<List<CurrencyRateDto>> GetRatesForLastMonthAsync()
     {
         var today = DateTime.Today;
-        var startMonth = DateTime.Today.AddDays(-today.Day + 1);
+        var monthAgo = DateTime.Today.AddDays(-30);
         
-        return await GetRatesForDateRangeAsync(startMonth, today);
+        return await GetRatesForDateRangeAsync(monthAgo, today);
     }
 }
